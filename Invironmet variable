@@ -1,0 +1,6 @@
+MONGO_URI=mongodb://localhost:27017/learnearn
+JWT_SECRET=your_jwt_secret
+STRIPE_SECRET_KEY=sk_test_...
+JUDGE0_API_KEY=your_judge0_key
+EMAIL_USER=your_email@gmail.com
+EMAIL_PASS=your_app_password
