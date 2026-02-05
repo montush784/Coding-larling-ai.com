@@ -67,3 +67,31 @@ router.post('/login', async (req, res) => {
 
 // Logout (client-side handled by removing token)
 module.exports = router;         
+const express = require('express');
+const Course = require('../models/Course'); // Define similar to User
+const auth = require('../middleware/auth'); // JWT middleware
+const router = express.Router();
+
+// Get all courses
+router.get('/', async (req, res) => {
+  const courses = await Course.find();
+  res.json(courses);
+});
+
+// Create course (admin only)
+router.post('/', auth, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ message: 'Access denied' });
+  const course = new Course(req.body);
+  await course.save();
+  res.status(201).json(course);
+});
+
+// Enroll in course
+router.post('/:id/enroll', auth, async (req, res) => {
+  const user = await User.findById(req.user.id);
+  user.enrolledCourses.push(req.params.id);
+  await user.save();
+  res.json({ message: 'Enrolled' });
+});
+
+module.exports = router;
