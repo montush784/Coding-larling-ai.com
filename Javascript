@@ -95,3 +95,38 @@ router.post('/:id/enroll', auth, async (req, res) => {
 });
 
 module.exports = router;
+const express = require('express');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const User = require('../models/User');
+const auth = require('../middleware/auth');
+const router = express.Router();
+
+// Create payment intent for course/subscription
+router.post('/create-payment-intent', auth, async (req, res) => {
+  const { amount, courseId } = req.body; // Amount in cents
+  const paymentIntent = await stripe.paymentIntents.create({
+    amount,
+    currency: 'usd',
+    metadata: { courseId, userId: req.user.id },
+  });
+  res.json({ clientSecret: paymentIntent.client_secret });
+});
+
+// Handle webhook for successful payment
+router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+  } catch (err) { return res.status(400).send(`Webhook Error: ${err.message}`); }
+
+  if (event.type === 'payment_intent.succeeded') {
+    const { courseId, userId } = event.data.object.metadata;
+    const user = await User.findById(userId);
+    user.enrolledCourses.push(courseId);
+    await user.save();
+  }
+  res.json({ received: true });
+});
+
+module.exports = router;
